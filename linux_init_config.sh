@@ -71,6 +71,61 @@ if [ "$OS" == "centos" ]; then
     yum clean all
     yum makecache
     echo "EPEL源已配置完成"
+elif [ "$OS" == "ubuntu" ]; then
+    # 备份原有源文件
+    cp /etc/apt/sources.list /etc/apt/sources.list.backup
+    
+    # 检测Ubuntu版本并配置对应的源
+    case $VERSION_ID in
+        "22.04")
+            # Ubuntu 22.04 (Jammy)
+            cat > /etc/apt/sources.list << EOF
+# 默认使用阿里云源
+deb https://mirrors.aliyun.com/ubuntu/ jammy main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ jammy-security main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ jammy-updates main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ jammy-backports main restricted universe multiverse
+
+# 源码镜像
+deb-src https://mirrors.aliyun.com/ubuntu/ jammy main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ jammy-security main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ jammy-updates main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ jammy-backports main restricted universe multiverse
+EOF
+            ;;
+        "20.04")
+            # Ubuntu 20.04 (Focal)
+            cat > /etc/apt/sources.list << EOF
+# 默认使用阿里云源
+deb https://mirrors.aliyun.com/ubuntu/ focal main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ focal-security main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ focal-updates main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ focal-backports main restricted universe multiverse
+
+# 源码镜像
+deb-src https://mirrors.aliyun.com/ubuntu/ focal main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ focal-security main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ focal-updates main restricted universe multiverse
+deb-src https://mirrors.aliyun.com/ubuntu/ focal-backports main restricted universe multiverse
+EOF
+            ;;
+        *)
+            echo "不支持的Ubuntu版本: $VERSION_ID"
+            exit 1
+            ;;
+    esac
+    
+    # 更新软件包列表
+    apt-get update -y || {
+        echo "更新软件包列表失败，尝试修复..."
+        apt-get clean
+        apt-get update -y
+    }
+    
+    # 升级系统软件包
+    apt-get upgrade -y
+    
+    echo "Ubuntu软件源已更新为阿里云源"
 elif [ "$OS" == "rocky" ]; then
     # 配置DNS
     echo "正在配置DNS服务器..."
@@ -286,6 +341,9 @@ fi
 
 # 配置时间同步
 if [ "$OS" == "centos" ]; then
+    # 设置时区为中国时间
+    timedatectl set-timezone Asia/Shanghai
+    
     # CentOS使用chronyd
     yum -y install chrony
     # 配置chrony使用国内时间服务器
@@ -315,6 +373,9 @@ EOF
     # 验证时间同步状态
     chronyc sources
 elif [ "$OS" == "ubuntu" ]; then
+    # 设置时区为中国时间
+    timedatectl set-timezone Asia/Shanghai
+    
     # Ubuntu使用systemd-timesyncd
     apt-get install -y systemd-timesyncd
     # 配置时间同步服务器
@@ -329,7 +390,9 @@ EOF
     # 验证时间同步状态
     timedatectl status
 elif [ "$OS" == "rocky" ]; then
-    echo "Rocky Linux不支持时间同步"
+    # 设置时区为中国时间
+    timedatectl set-timezone Asia/Shanghai
+    echo "已设置时区为 Asia/Shanghai"
 fi
 
 echo "系统初始化配置完成！"
